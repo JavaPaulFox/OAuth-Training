@@ -1,4 +1,4 @@
-package com.samsung.training.oauth2.utility.Tokens;
+package com.samsung.training.oauth2.utility.tokens;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;

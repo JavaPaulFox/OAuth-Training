@@ -15,12 +15,14 @@ public class AuthorizationController {
 	@Autowired
 	private Environment env;
 
+	@Autowired
+	private GoogleApi googleApi;
+
 	@RequestMapping(value = "/getcode", method = RequestMethod.GET)
 	public  String getCode(@RequestParam String state, @RequestParam String code, @RequestParam(required = false) String scope, @RequestParam(required = false) String authuser, @RequestParam(required = false) String session_state, @RequestParam(required = false) String prompt) {
 		if(state.equals(env.getProperty("google.api.state")))
 		{
-			GoogleApi googleApi = new GoogleApi();
-			googleApi.sendRequestForToken(code, env);
+			googleApi.sendRequestForToken(code);
 		}
 		return "index";
 	}

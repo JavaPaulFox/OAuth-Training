@@ -1,27 +1,42 @@
 package com.samsung.training.oauth2.utility;
 
 import com.google.gson.Gson;
-import com.samsung.training.oauth2.utility.Tokens.GoogleToken;
+import com.samsung.training.oauth2.entities.GoogleAccount;
+import com.samsung.training.oauth2.entities.User;
+import com.samsung.training.oauth2.repositories.GoogleAccountRepository;
+import com.samsung.training.oauth2.repositories.UserRepository;
+import com.samsung.training.oauth2.utility.googleModels.userInfo.UserInfo;
+import com.samsung.training.oauth2.utility.tokens.GoogleToken;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-@Configuration
+@Component
 public class GoogleApi {
 
+	@Autowired
+	private UserRepository userRepository;
 
-	public void sendRequestForToken(String code, Environment env) {
+	@Autowired
+	private GoogleAccountRepository googleAccountRepository;
+
+	@Autowired
+	private Environment env;
+
+	public void sendRequestForToken(String code) {
 
 		HttpClient client = HttpClientBuilder.create().build();
 		HttpPost post = new HttpPost(env.getProperty("google.api.token_url"));
@@ -40,9 +55,35 @@ public class GoogleApi {
 			GoogleToken token = gson.fromJson(EntityUtils.toString(response.getEntity()), GoogleToken.class);
 			if(token != null)
 			{
+				HttpGet get = new HttpGet(env.getProperty("google.api.google_plus.get_user"));
+				get.setHeader("Authorization", token.getToken_type() + " "+token.getAccess_token());
+				response = client.execute(get);
+				UserInfo userInfo = gson.fromJson(EntityUtils.toString(response.getEntity()), UserInfo.class);
+				if(userInfo != null)
+				{
+					if(TryParseHelper.tryParseLong(userInfo.getId()))
+					{
+						if(googleAccountRepository.fi(Long.parseUnsignedLong(userInfo.getId())))
+						{
+							GoogleAccount googleAccount = new GoogleAccount();
+							googleAccount.setGoogleId(userInfo.getId());
+							googleAccount.setFirstName(userInfo.getName().getGivenName());
+							googleAccount.setSecondName(userInfo.getName().getFamilyName());
+							googleAccount.setPhotoUrl(userInfo.getImage().getUrl());
+							googleAccount.setLocation(userInfo.getPlacesLived()[0].getValue());
 
+							User user = new User();
+							user.setFirstName(userInfo.getName().getGivenName());
+							user.setSecondName(userInfo.getName().getFamilyName());
+							user.setGoogleAccount(googleAccount);
+							user.setEmail(userInfo.getEmails()[0].getValue());
+
+							userRepository.save(user);
+						}
+					}
+
+				}
 			}
-
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
