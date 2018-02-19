@@ -3,6 +3,7 @@ package com.samsung.training.oauth2.utility;
 import com.google.gson.Gson;
 import com.samsung.training.oauth2.entities.GoogleAccount;
 import com.samsung.training.oauth2.entities.User;
+import com.samsung.training.oauth2.models.UserSession;
 import com.samsung.training.oauth2.repositories.GoogleAccountRepository;
 import com.samsung.training.oauth2.repositories.UserRepository;
 import com.samsung.training.oauth2.utility.googleModels.userInfo.UserInfo;
@@ -36,8 +37,9 @@ public class GoogleApi {
 	@Autowired
 	private Environment env;
 
-	public void sendRequestForToken(String code) {
-
+	public UserSession sendRequestForToken(String code) {
+		User user = new User();
+		UserSession userSession = new UserSession();
 		HttpClient client = HttpClientBuilder.create().build();
 		HttpPost post = new HttpPost(env.getProperty("google.api.token_url"));
 
@@ -61,9 +63,7 @@ public class GoogleApi {
 				UserInfo userInfo = gson.fromJson(EntityUtils.toString(response.getEntity()), UserInfo.class);
 				if(userInfo != null)
 				{
-					if(TryParseHelper.tryParseLong(userInfo.getId()))
-					{
-						if(googleAccountRepository.fi(Long.parseUnsignedLong(userInfo.getId())))
+						if(googleAccountRepository.findByGoogleId(userInfo.getId()).isEmpty())
 						{
 							GoogleAccount googleAccount = new GoogleAccount();
 							googleAccount.setGoogleId(userInfo.getId());
@@ -72,20 +72,24 @@ public class GoogleApi {
 							googleAccount.setPhotoUrl(userInfo.getImage().getUrl());
 							googleAccount.setLocation(userInfo.getPlacesLived()[0].getValue());
 
-							User user = new User();
+
 							user.setFirstName(userInfo.getName().getGivenName());
 							user.setSecondName(userInfo.getName().getFamilyName());
 							user.setGoogleAccount(googleAccount);
 							user.setEmail(userInfo.getEmails()[0].getValue());
 
 							userRepository.save(user);
-						}
-					}
 
+						}
+
+					userSession.setUserName(userInfo.getDisplayName());
+					return userSession;
+					}
 				}
-			}
+				return null;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		return null;
 	}
 }

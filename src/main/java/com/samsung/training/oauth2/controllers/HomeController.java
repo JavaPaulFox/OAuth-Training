@@ -1,12 +1,12 @@
 package com.samsung.training.oauth2.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 
 @Controller
@@ -21,7 +21,7 @@ public class HomeController {
 	@Autowired
 	private Environment env;
 
-	@RequestMapping(value="/index", method=RequestMethod.GET)
+	@RequestMapping(value="/login", method=RequestMethod.GET)
 	public String index(Map<String, Object> model)
 	{
 		StringBuilder googleAuthUrl = new StringBuilder();
